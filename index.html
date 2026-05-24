@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Học liệu tương tác: Tiến trình tìm hiểu thế giới tự nhiên dưới góc độ Vật lí</title>
+
+    <!-- Thư viện hỗ trợ giao diện và logic tương tác -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            startup: {
+                typeset: false,
+                ready: () => {
+                    MathJax.startup.defaultReady();
+                    window.dispatchEvent(new Event('mathjax-ready'));
+                }
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        [v-cloak] { display: none; }
+        .animate-fade-in { animation: fadeIn 0.35s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-slate-50 p-4 font-sans text-gray-800 md:p-8">
+    <div id="app" v-cloak class="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 shadow-xl md:p-8">
+        
+        <header class="mb-8 text-center">
+            <h1 class="mb-2 text-2xl font-extrabold uppercase tracking-wide text-blue-700 md:text-3xl">
+                Bài 1: Làm quen với Vật lí
+            </h1>
+            <p class="mx-auto max-w-4xl text-sm font-medium text-gray-600 md:text-base">
+                Yêu cầu 5: Mô tả được các bước trong tiến trình tìm hiểu thế giới tự nhiên dưới góc độ vật lí
+            </p>
+        </header>
+
+        <!-- Thanh điều hướng giữa các cấu phần học liệu -->
+        <nav class="mb-6 flex flex-wrap gap-1 rounded-t-xl border-b-2 border-blue-200 bg-slate-50" aria-label="Điều hướng học liệu">
+            <button
+                v-for="tab in tabs"
+                :key="tab.id"
+                type="button"
+                @click="switchTab(tab.id)"
+                :class="[
+                    'px-4 py-3 text-sm font-bold transition-all duration-300 md:px-6 md:py-4 md:text-base',
+                    currentTab === tab.id ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 hover:bg-blue-100 hover:text-blue-800'
+                ]"
+            >
+                {{ tab.name }}
+            </button>
+        </nav>
+
+        <main class="min-h-[520px]">
+            <!-- TAB 1: TRÒ CHƠI KÉO THẢ TIẾN TRÌNH THỰC NGHIỆM -->
+            <section v-show="currentTab === 'tab1'" class="animate-fade-in">
+                <div class="mb-6">
+                    <h2 class="border-l-4 border-blue-600 pl-3 text-2xl font-bold text-blue-800">
+                        Thử thách sắp xếp: Tiến trình thực nghiệm của Galilei
+                    </h2>
+                    <p class="mt-3 text-base text-gray-700">
+                        Kéo các thẻ hành động thực tế của Galilei ở hộp bên phải và thả vào đúng 5 bước của tiến trình tìm hiểu khoa học tương ứng ở cột bên trái. Màu xanh báo hiệu vị trí đúng, màu đỏ báo hiệu thẻ đặt sai bước.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+                    <!-- Cột các bước mục tiêu -->
+                    <div class="flex flex-col gap-4">
+                        <div class="flex items-center justify-between border-b-2 border-blue-200 pb-2">
+                            <h3 class="text-xl font-bold text-blue-600">Sơ đồ tiến trình nghiên cứu</h3>
+                            <button
+                                type="button"
+                                @click="resetDragGame"
+                                class="rounded-lg border border-blue-200 px-3 py-1.5 text-sm font-bold text-blue-700 hover:bg-blue-50"
+                            >
+                                Làm lại
+                            </button>
+                        </div>
+
+                        <div
+                            v-for="zone in conceptZones"
+                            :key="zone.id"
+                            class="rounded-xl border-2 p-4 transition-colors duration-300"
+                            :class="getZoneColor(zone)"
+                        >
+                            <div class="mb-2 text-base font-bold text-gray-800" v-html="zone.title"></div>
+
+                            <div
+                                class="flex min-h-[80px] flex-col justify-center gap-2 rounded-lg border-2 border-dashed border-gray-400 bg-white p-3 shadow-inner"
+                                @dragover.prevent
+                                @drop="onDrop($event, zone.id)"
+                            >
+                                <div v-if="zone.items.length === 0" class="py-2 text-center text-sm italic text-gray-400">
+                                    Kéo hành động thả vào đây...
+                                </div>
+
+                                <div
+                                    v-for="item in zone.items"
+                                    :key="item.id"
+                                    draggable="true"
+                                    @dragstart="onDragStart($event, item, zone.id)"
+                                    @dragend="onDragEnd"
+                                    class="cursor-grab rounded-lg border border-blue-200 bg-slate-50 p-3 text-left text-sm font-medium leading-relaxed text-blue-950 shadow-sm"
+                                    v-html="item.text"
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hộp chứa các thẻ xáo trộn -->
+                    <div class="flex flex-col gap-4">
+                        <h3 class="border-b-2 border-amber-200 pb-2 text-xl font-bold text-amber-600">Các hành động thực tế (Xáo trộn)</h3>
+
+                        <div
+                            class="min-h-[400px] rounded-xl border border-amber-200 bg-amber-50 p-5 shadow-inner"
+                            @dragover.prevent
+                            @drop="onDrop($event, 'bank')"
+                        >
+                            <div class="flex flex-col gap-4">
+                                <div v-if="formulaBank.length === 0" class="mt-10 text-center font-bold text-amber-600">
+                                    Chúc mừng! Bạn đã phân loại xuất sắc toàn bộ tiến trình! 🎉
+                                </div>
+
+                                <div
+                                    v-for="item in formulaBank"
+                                    :key="item.id"
+                                    draggable="true"
+                                    @dragstart="onDragStart($event, item, 'bank')"
+                                    @dragend="onDragEnd"
+                                    class="cursor-grab rounded-lg border-l-4 border-orange-500 bg-white p-4 text-sm font-medium leading-relaxed shadow-md transition-colors hover:bg-orange-100 active:cursor-grabbing md:text-base"
+                                    v-html="item.text"
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: LÝ THUYẾT TRỌNG TÂM -->
+            <section v-show="currentTab === 'tab2'" class="animate-fade-in space-y-6 text-base leading-relaxed text-gray-800 md:text-lg">
+                <h2 class="border-l-4 border-blue-600 pl-3 text-2xl font-bold text-blue-800">
+                    Phương pháp thực nghiệm trong nghiên cứu Vật lí
+                </h2>
+
+                <div class="rounded-xl border border-blue-200 bg-blue-50 p-5">
+                    <h3 class="mb-3 text-xl font-bold text-blue-700">1. Bản chất khoa học của tiến trình</h3>
+                    <p class="text-base mb-3">
+                        Khác với các nhà triết học cổ đại chỉ tìm hiểu thế giới dựa trên quan sát và suy luận chủ quan (dẫn đến những sai lầm lịch sử như quan niệm của Aristotle cho rằng vật nặng rơi nhanh hơn vật nhẹ), phương pháp thực nghiệm do Galilei khởi xướng lấy <b>thí nghiệm thực tế làm thước đo tối cao</b> để kiểm chứng tính đúng đắn của mọi giả thuyết khoa học.
+                    </p>
+                </div>
+
+                <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-5">
+                    <h3 class="mb-3 text-xl font-bold text-indigo-700">2. Ma trận chi tiết 5 bước của tiến trình thực nghiệm</h3>
+                    <div class="overflow-x-auto text-base">
+                        <table class="w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                            <thead>
+                                <tr class="bg-indigo-600 text-left text-white">
+                                    <th class="p-3 w-1/4">Tên bước</th>
+                                    <th class="p-3">Nội dung cốt lõi</th>
+                                    <th class="p-3 w-1/3">Ví dụ nghiên cứu sự rơi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr>
+                                    <td class="p-3 font-semibold text-indigo-900">Bước 1: Xác định vấn đề</td>
+                                    <td class="p-3">Nhận diện mâu thuẫn, đặt câu hỏi nghiên cứu rõ ràng về một hiện tượng tự nhiên.</td>
+                                    <td class="p-3">Có đúng là vật nặng luôn rơi nhanh hơn vật nhẹ hay không?</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold text-indigo-900">Bước 2: Quan sát, thu thập thông tin</td>
+                                    <td class="p-3">Quan sát các hiện tượng tương tự hằng ngày, thu thập dữ liệu thô để tìm mối liên hệ.</td>
+                                    <td class="p-3">Quan sát thấy những giọt nước mưa hoặc hạt tuyết to nhỏ khác nhau đều rơi xuống như nhau.</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold text-indigo-900">Bước 3: Đưa ra dự đoán</td>
+                                    <td class="p-3">Đề xuất giả thuyết khoa học mang tính suy đoán logic để giải thích hiện tượng.</td>
+                                    <td class="p-3">Dự đoán sự rơi nhanh hay chậm không phụ thuộc vào vật nặng hay nhẹ.</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold text-indigo-900">Bước 4: Thí nghiệm kiểm tra</td>
+                                    <td class="p-3">Thiết kế phương án và cô lập các biến số, tiến hành thực nghiệm thực tế để thu thập dữ liệu đối chứng.</td>
+                                    <td class="p-3">Thả hai quả cầu kim loại nặng chênh nhau 10 lần cùng lúc từ tháp nghiêng Pisa.</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-3 font-semibold text-indigo-900">Bước 5: Kết luận</td>
+                                    <td class="p-3">Phân tích dữ liệu thực nghiệm. Khẳng định hoặc bác bỏ dự đoán để rút ra quy luật.</td>
+                                    <td class="p-3">Hai quả cầu chạm đất cùng lúc $\rightarrow$ Xác nhận sự rơi tự do độc lập với khối lượng vật.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-purple-200 bg-purple-50 p-5 text-base font-medium">
+                    <h3 class="mb-3 text-xl font-bold text-purple-700">3. Nguyên tắc cô lập biến số trong thực nghiệm</h3>
+                    <p class="text-gray-700">
+                        Khi muốn khảo sát sự phụ thuộc của một hiện tượng vào một yếu tố xác định (ví dụ: tốc độ bay hơi phụ thuộc vào nhiệt độ), quy tắc bắt buộc là phải giữ <b>tất cả các yếu tố khác không đổi</b> (loại chất lỏng, diện tích mặt thoáng, gió tác động) và chỉ cho phép duy nhất yếu tố cần nghiên cứu (nhiệt độ) biến đổi.
+                    </p>
+                </div>
+            </section>
+
+            <!-- TAB 3: MÔ PHỎNG TƯƠNG TÁC TỐC ĐỘ BAY HƠI -->
+            <section v-show="currentTab === 'tab3'" class="animate-fade-in">
+                <h2 class="border-l-4 border-blue-600 pl-3 text-2xl font-bold text-blue-800">
+                    Phòng thí nghiệm ảo: Khảo sát tốc độ bay hơi của chất lỏng
+                </h2>
+                <p class="mt-3 mb-6 text-base text-gray-700">
+                    Áp dụng tiến trình thực nghiệm để kiểm chứng sự phụ thuộc của tốc độ bay hơi của nước vào nhiệt độ môi trường ngoài. Thay đổi thanh trượt nhiệt độ để quan sát độ dốc biến thiên lượng nước còn lại theo thời gian thực.
+                </p>
+
+                <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                    <!-- Thanh điều khiển thông số biến số -->
+                    <aside class="flex flex-col justify-center space-y-6 rounded-xl border border-slate-300 bg-slate-50 p-6 shadow-sm lg:col-span-1">
+                        <h3 class="border-b pb-2 text-xl font-bold text-gray-800">Kiểm soát biến số thí nghiệm</h3>
+
+                        <div>
+                            <label class="mb-1 flex justify-between text-base font-bold text-orange-700">
+                                <span>Biến số thay đổi: Nhiệt độ ($T$)</span>
+                                <span>{{ temperature }} °C</span>
+                            </label>
+                            <input type="range" v-model.number="temperature" min="20" max="80" step="5" class="h-3 w-full cursor-pointer appearance-none rounded-lg bg-orange-200 accent-orange-600">
+                        </div>
+
+                        <div class="space-y-3 border-t pt-4 text-sm font-semibold text-slate-600">
+                            <div class="text-xs uppercase tracking-wide text-slate-400">Các biến số được giữ hằng số (Cô lập):</div>
+                            <div>• Loại chất lỏng: <span class="text-blue-600">Nước tinh khiết</span></div>
+                            <div>• Thể tích ban đầu: <span class="text-blue-600">100 ml</span></div>
+                            <div>• Diện tích mặt thoáng: <span class="text-blue-600">Đĩa tròn đường kính 10cm</span></div>
+                            <div>• Tốc độ gió môi trường: <span class="text-blue-600">0 m/s (Kín gió)</span></div>
+                        </div>
+
+                        <div class="rounded-lg border border-indigo-300 bg-indigo-100 p-4 text-sm font-semibold text-indigo-950">
+                            <div class="border-b border-indigo-200 pb-1 text-xs uppercase tracking-wide">Kết quả định lượng sau 10 phút</div>
+                            <div>• Tốc độ bay hơi tức thời: <span class="font-mono font-bold text-red-700">{{ computedRate.toFixed(2) }} ml/phút</span></div>
+                            <div>• Lượng nước còn lại trong đĩa: <span class="font-mono font-bold text-blue-700">{{ Math.max(0, 100 - computedRate * 10).toFixed(1) }} ml</span></div>
+                        </div>
+                    </aside>
+
+                    <!-- Khung hiển thị đồ thị của biến số thu được -->
+                    <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-md lg:col-span-2">
+                        <div class="relative h-[400px] w-full">
+                            <canvas id="evaporationChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: ĐÁNH GIÁ NĂNG LỰC BAO QUÉT -->
+            <section v-show="currentTab === 'tab4'" class="animate-fade-in">
+                <h2 class="mb-4 border-l-4 border-blue-600 pl-3 text-2xl font-bold text-blue-800">
+                    Đánh giá năng lực: Phá vỡ các góc nghẽn tư duy thực nghiệm
+                </h2>
+
+                <div class="flex flex-col gap-8">
+                    <article v-for="(q, qIndex) in quizData" :key="q.id" class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                        <div class="mb-4 flex items-center justify-between border-b pb-3">
+                            <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-800">Câu hỏi {{ qIndex + 1 }}</span>
+                            <span class="rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-800">Mức độ: {{ q.level }}</span>
+                        </div>
+
+                        <p class="mb-4 text-lg font-bold leading-snug text-slate-800" v-html="q.question"></p>
+
+                        <div class="flex flex-col gap-3">
+                            <button
+                                v-for="option in q.options"
+                                :key="option.id"
+                                type="button"
+                                @click="selectOption(q, option)"
+                                :class="['rounded-lg border-2 p-4 text-left text-base transition-all duration-200', getOptionClass(q, option)]"
+                            >
+                                <span class="mr-3 rounded bg-white px-2 py-1 font-bold shadow-sm">{{ option.id }}</span>
+                                <span v-html="option.text"></span>
+                            </button>
+                        </div>
+
+                        <!-- Khung phản hồi biện chứng động -->
+                        <div
+                            v-if="q.selectedOption"
+                            :class="[
+                                'mt-4 rounded-lg border-l-4 p-5 text-base shadow-inner animate-fade-in',
+                                q.selectedOption.isCorrect ? 'border-green-500 bg-green-50 text-green-900' : 'border-orange-500 bg-orange-50 text-orange-900'
+                            ]"
+                        >
+                            <h4 class="mb-1 font-bold">
+                                {{ q.selectedOption.isCorrect ? '🎉 Tư duy khoa học chính xác:' : '💡 Phân tích bẫy ngộ nhận:' }}
+                            </h4>
+                            <p v-html="q.selectedOption.feedback"></p>
+                        </div>
+                    </article>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const app = Vue.createApp({
+            data() {
+                const initialCards = [
+                    { id: 'c1', text: 'Đặt câu hỏi nghiên cứu cốt lõi: "Có đúng là vật nặng luôn rơi nhanh hơn vật nhẹ hay không?"', matchId: 'step1' },
+                    { id: 'c2', text: 'Quan sát thấy những giọt nước mưa, hạt tuyết to nhỏ khác nhau khi rơi trong không khí đều rơi xuống như nhau.', matchId: 'step2' },
+                    { id: 'c3', text: 'Đưa ra giả thuyết: Sự rơi nhanh hay chậm của các vật không phụ thuộc vào việc vật đó nặng hay nhẹ.', matchId: 'step3' },
+                    { id: 'c4', text: 'Thiết kế thả rơi đồng thời hai quả cầu kim loại có khối lượng lệch nhau 10 lần từ đỉnh tháp nghiêng Pisa xuống đất.', matchId: 'step4' },
+                    { id: 'c5', text: 'Phân tích kết quả hai quả cầu chạm đất cùng lúc để khẳng định giả thuyết ban đầu là đúng đắn.', matchId: 'step5' }
+                ];
+
+                return {
+                    tabs: [
+                        { id: 'tab1', name: '1. Khởi động' },
+                        { id: 'tab2', name: '2. Khung lý thuyết' },
+                        { id: 'tab3', name: '3. Mô phỏng ảo' },
+                        { id: 'tab4', name: '4. Đánh giá' }
+                    ],
+                    currentTab: 'tab1',
+
+                    // Quản lý trạng thái trò chơi kéo thả
+                    draggedItem: null,
+                    sourceZone: null,
+                    allCards: initialCards,
+                    conceptZones: [
+                        { id: 'step1', title: 'Bước 1: Xác định vấn đề cần nghiên cứu', items: [] },
+                        { id: 'step2', title: 'Bước 2: Quan sát, thu thập thông tin', items: [] },
+                        { id: 'step3', title: 'Bước 3: Đưa ra dự đoán', items: [] },
+                        { id: 'step4', title: 'Bước 4: Thí nghiệm kiểm tra dự đoán', items: [] },
+                        { id: 'step5', title: 'Bước 5: Kết luận', items: [] }
+                    ],
+                    formulaBank: initialCards.map(item => ({ ...item })),
+
+                    // Thông số mô phỏng
+                    temperature: 30,
+                    myChart: null,
+                    isChartScheduled: false,
+
+                    // Hệ thống câu hỏi bẫy trắc nghiệm tư duy
+                    quizData: [
+                        {
+                            id: 1,
+                            level: 'Nhận biết',
+                            question: 'Trong tiến trình tìm hiểu thế giới tự nhiên dưới góc độ vật lí, nếu kết quả thu được từ các thực nghiệm thực tế chứng tỏ dự đoán khoa học ban đầu là SAI, nhà nghiên cứu cần thực hiện bước tiếp theo như thế nào?',
+                            options: [
+                                { id: 'A', text: 'Bắt buộc phải kết thúc tiến trình nghiên cứu và công nhận hiện tượng không thể giải thích.', isCorrect: false, feedback: '<b>Sai tinh thần khoa học:</b> Khoa học không bỏ cuộc khi giả thuyết sai. Thực nghiệm chứng minh dự đoán sai là tiền đề mở ra một hướng đi mới.' },
+                                { id: 'B', text: 'Phải đưa ra dự đoán mới và làm thí nghiệm kiểm tra dự đoán mới này, hoặc xác định lại vấn đề cần nghiên cứu.', isCorrect: true, feedback: '<b>Chính xác:</b> Sơ đồ tiến trình thực nghiệm mang tính khép kín và linh hoạt. Nếu thí nghiệm bác bỏ dự đoán, người nghiên cứu phải điều chỉnh, đề xuất giả thuyết mới hoặc định vị lại câu hỏi vấn đề ban đầu.' },
+                                { id: 'C', text: 'Thay đổi số liệu thực nghiệm thu được để ép kết quả khớp với dự đoán ban đầu.', isCorrect: false, feedback: '<b>Vi phạm nghiêm trọng đạo đức khoa học:</b> Tuyệt đối không được ngụy tạo số liệu để bảo vệ một ý kiến chủ quan sai lầm.' },
+                                { id: 'D', text: 'Giữ nguyên dự đoán và khẳng định rằng thí nghiệm thực tế không có giá trị bằng lý thuyết.', isCorrect: false, feedback: '<b>Ngộ nhận phương pháp luận:</b> Trong Vật lí thực nghiệm, thí nghiệm kiểm chứng thực tế là thước đo tối cao để thẩm định lý thuyết.' }
+                            ],
+                            selectedOption: null
+                        },
+                        {
+                            id: 2,
+                            level: 'Thông hiểu',
+                            question: 'Yếu tố cốt lõi nào sau đây đã dẫn đến việc nhà bác học lỗi lạc Aristotle mắc sai lầm kéo dài gần 20 thế kỉ khi khẳng định rằng "vật nặng rơi nhanh hơn vật nhẹ, vật càng nặng rơi càng nhanh"?',
+                            options: [
+                                { id: 'A', text: 'Do ông không có năng lực suy luận logic toán học.', isCorrect: false, feedback: 'Aristotle là một nhà triết học đại tài với tư duy logic cực kỳ sắc bén, lỗi không nằm ở năng lực lập luận đại số của ông.' },
+                                { id: 'B', text: 'Do thời kỳ đó khoa học kỹ thuật chưa chế tạo được đồng hồ đo thời gian hiện số chính xác.', isCorrect: false, feedback: 'Dù dụng cụ thô sơ, việc chứng minh tính đồng thời chạm đất của các vật hoàn toàn có thể quan sát bằng mắt thường như cách Galilei đã thực hiện.' },
+                                { id: 'C', text: 'Do ông hoàn toàn chỉ dừng lại ở việc quan sát sơ khai và suy luận chủ quan mà không tiến hành thí nghiệm thực tế để kiểm tra quan điểm của mình.', isCorrect: true, feedback: '<b>Rất chính xác:</b> Đây là bài học lịch sử lớn nhất về phương pháp luận. Aristotle chỉ dùng suy luận để bảo vệ ý kiến cá nhân mà quên mất việc thiết kế thực nghiệm độc lập để đối chiếu.' },
+                                { id: 'D', text: 'Do lực cản của không khí vào thời kỳ Hy Lạp cổ đại tác dụng lên các vật quá lớn.', isCorrect: false, feedback: 'Lực cản không khí phụ thuộc hình hình học của vật, không thay đổi theo dòng lịch sử thời đại.' }
+                            ],
+                            selectedOption: null
+                        },
+                        {
+                            id: 3,
+                            level: 'Vận dụng',
+                            question: 'Để áp dụng tiến trình thực nghiệm vào việc khảo sát xem "Tốc độ bay hơi của nước phụ thuộc như thế nào vào diện tích mặt thoáng", một nhóm học sinh cần phải thiết lập và kiểm soát các biến số thí nghiệm ra sao?',
+                            options: [
+                                { id: 'A', text: 'Dùng các đĩa có diện tích khác nhau, đổ các loại chất lỏng khác nhau (nước, cồn, dầu) và đặt ở các phòng có nhiệt độ khác nhau.', isCorrect: false, feedback: '<b>Lỗi vi phạm cô lập biến số:</b> Bạn đang để quá nhiều biến số (loại chất lỏng, nhiệt độ, diện tích) thay đổi cùng lúc, khiến không thể rút ra quy luật riêng cho diện tích mặt thoáng.' },
+                                { id: 'B', text: 'Giữ nguyên diện tích mặt thoáng giống nhau, chỉ thay đổi nhiệt độ xung quanh đĩa nước.', isCorrect: false, feedback: '<b>Lỗi ngược mục tiêu biến số:</b> Cách làm này là để khảo sát sự phụ thuộc vào nhiệt độ (như tab mô phỏng), không phải khảo sát sự phụ thuộc vào diện tích mặt thoáng.' },
+                                { id: 'C', text: 'Bắt buộc phải thay đổi đồng thời diện tích mặt thoáng của đĩa và tốc độ gió thổi qua mặt thoáng.', isCorrect: false, feedback: 'Thay đổi cả gió và diện tích sẽ làm nhiễu loạn kết quả thực nghiệm thu được.' },
+                                { id: 'D', text: 'Thay đổi diện tích mặt thoáng (dùng các đĩa to nhỏ khác nhau), đồng thời phải giữ nguyên hằng số không đổi: cùng một loại chất lỏng (nước), cùng thể tích ban đầu, cùng nhiệt độ và tốc độ gió môi trường.', isCorrect: true, feedback: '<b>Xử lý biến số tuyệt vời:</b> Để đo chính xác tác động của duy nhất diện tích mặt thoáng, tất cả các tác nhân còn lại (nhiệt độ, gió, loại chất lỏng, thể tích nền) phải được cô lập cố định hoàn toàn.' }
+                            ],
+                            selectedOption: null
+                        }
+                    ]
+                };
+            },
+
+            computed: {
+                // Tốc độ bốc hơi mô phỏng phụ thuộc tuyến tính vào nhiệt độ
+                computedRate() {
+                    return 0.1 * (this.temperature - 10);
+                }
+            },
+
+            watch: {
+                temperature() {
+                    this.scheduleChartUpdate();
+                }
+            },
+
+            methods: {
+                // Logic xử lý kéo thả native HTML5
+                resetDragGame() {
+                    this.conceptZones.forEach(zone => { zone.items = []; });
+                    this.formulaBank = this.allCards.map(item => ({ ...item }));
+                    this.draggedItem = null;
+                    this.sourceZone = null;
+                    this.triggerMathJax();
+                },
+
+                onDragStart(event, item, source) {
+                    this.draggedItem = item;
+                    this.sourceZone = source;
+                    event.dataTransfer.effectAllowed = 'move';
+                },
+
+                onDragEnd() {
+                    this.draggedItem = null;
+                    this.sourceZone = null;
+                },
+
+                removeDraggedItemFromSource() {
+                    if (this.sourceZone === 'bank') {
+                        this.formulaBank = this.formulaBank.filter(item => item.id !== this.draggedItem.id);
+                        return;
+                    }
+                    const zone = this.conceptZones.find(item => item.id === this.sourceZone);
+                    if (zone) {
+                        zone.items = zone.items.filter(item => item.id !== this.draggedItem.id);
+                    }
+                },
+
+                onDrop(event, targetZone) {
+                    if (!this.draggedItem) return;
+
+                    const movedItem = { ...this.draggedItem };
+                    this.removeDraggedItemFromSource();
+
+                    if (targetZone === 'bank') {
+                        this.formulaBank.push(movedItem);
+                    } else {
+                        const zone = this.conceptZones.find(item => item.id === targetZone);
+                        if (zone) zone.items.push(movedItem);
+                    }
+
+                    this.draggedItem = null;
+                    this.sourceZone = null;
+                    this.triggerMathJax();
+                },
+
+                getZoneColor(zone) {
+                    if (zone.items.length === 0) return 'border-gray-300 bg-slate-50';
+                    const isAllCorrect = zone.items.every(item => item.matchId === zone.id);
+                    return isAllCorrect ? 'border-green-500 bg-green-100 text-green-950' : 'border-red-500 bg-red-100 text-red-950';
+                },
+
+                switchTab(tabId) {
+                    this.currentTab = tabId;
+                    this.triggerMathJax();
+
+                    if (tabId === 'tab3') {
+                        this.$nextTick(() => {
+                            if (!this.myChart) {
+                                this.initChart();
+                            } else {
+                                this.myChart.resize();
+                                this.updateEvaporationChart();
+                            }
+                        });
+                    }
+                },
+
+                triggerMathJax() {
+                    this.$nextTick(() => {
+                        if (window.MathJax && MathJax.typesetPromise) {
+                            MathJax.typesetClear([document.getElementById('app')]);
+                            MathJax.typesetPromise([document.getElementById('app')]).catch(err => console.warn(err));
+                        }
+                    });
+                },
+
+                selectOption(question, option) {
+                    question.selectedOption = option;
+                    this.triggerMathJax();
+                },
+
+                getOptionClass(question, option) {
+                    if (!question.selectedOption) {
+                        return 'border-gray-200 bg-slate-50 hover:border-blue-400 hover:bg-blue-50 cursor-pointer';
+                    }
+                    if (question.selectedOption.id === option.id) {
+                        return option.isCorrect
+                            ? 'border-green-600 bg-green-100 text-green-900 shadow-md font-medium'
+                            : 'border-red-600 bg-red-100 text-red-900 shadow-md font-medium';
+                    }
+                    return 'border-gray-200 bg-slate-50 opacity-60';
+                },
+
+                // Sinh dữ liệu động cho đồ thị bốc hơi nước
+                generateChartData() {
+                    const dataPoints = [];
+                    const labels = [];
+                    const rate = this.computedRate;
+                    const initialVol = 100;
+
+                    for (let t = 0; t <= 12; t += 1) {
+                        labels.push(t + ' phút');
+                        const remaining = Math.max(0, initialVol - rate * t);
+                        dataPoints.push({ x: t, y: Number(remaining.toFixed(2)) });
+                    }
+                    return { labels, dataPoints };
+                },
+
+                initChart() {
+                    if (typeof Chart === 'undefined') return;
+                    const canvas = document.getElementById('evaporationChart');
+                    if (!canvas) return;
+
+                    const context = canvas.getContext('2d');
+                    const { labels, dataPoints } = this.generateChartData();
+
+                    this.myChart = Vue.markRaw(new Chart(context, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                {
+                                    label: 'Thể tích nước còn lại trong đĩa (ml)',
+                                    data: dataPoints,
+                                    parsing: false,
+                                    borderColor: '#2563eb',
+                                    backgroundColor: 'rgba(37, 99, 235, 0.05)',
+                                    fill: true,
+                                    borderWidth: 3,
+                                    pointRadius: 4,
+                                    pointBackgroundColor: '#1d4ed8',
+                                    tension: 0
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: false,
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Trục thời gian tiến trình thực nghiệm (phút)',
+                                        font: { size: 13, weight: 'bold' }
+                                    }
+                                },
+                                y: {
+                                    min: 0,
+                                    max: 110,
+                                    title: {
+                                        display: true,
+                                        text: 'Thể tích chất lỏng V (ml)',
+                                        font: { size: 13, weight: 'bold' }
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: { labels: { font: { size: 12, weight: 'bold' } } }
+                            }
+                        }
+                    }));
+                },
+
+                scheduleChartUpdate() {
+                    if (this.isChartScheduled) return;
+                    this.isChartScheduled = true;
+
+                    requestAnimationFrame(() => {
+                        this.updateEvaporationChart();
+                        this.isChartScheduled = false;
+                    });
+                },
+
+                updateEvaporationChart() {
+                    if (!this.myChart) return;
+                    const { dataPoints } = this.generateChartData();
+                    this.myChart.data.datasets[0].data = dataPoints;
+                    this.myChart.update('none');
+                }
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>
